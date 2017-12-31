@@ -1,0 +1,39 @@
+- name: create python 3 environment
+  hosts: all
+  vars:
+    python_version: "3.6.4"
+    pyenv_home: "{{ ansible_env.HOME }}/.pyenv"
+    bash_profile_path: "{{ ansible_env.HOME}}/.bash_profile"
+  tasks:
+    - name: install packages
+      apt: pkg={{ item }} update_cache=yes cache_valid_time=3600
+      become: true
+      with_items:
+        - git
+        - gcc
+        - make
+        - openssl
+        - libssl-dev
+        - libbz2-dev
+        - libreadline-dev
+        - libsqlite3-dev
+        - vim
+    - name: git checkout pyenv
+      git:
+        repo: "https://github.com/yyuu/pyenv.git"
+        dest: "{{ pyenv_home }}"
+    - name: make sure ~/.bash_profile exists
+      file:
+        path: "{{ bash_profile_path }}"
+        state: touch
+    - name: add pyenv config to ~/.bash_profile
+      blockinfile:
+        path: "{{ bash_profile_path }}"
+        block: |
+          export PYENV_ROOT="$HOME/.pyenv"
+          export PATH="$PYENV_ROOT/bin:$PATH"
+          eval "$(pyenv init -)"
+    - name: install python {{ python_version }} via pyenv
+      shell: /bin/bash -cl "pyenv install -s {{ python_version }}"
+    - name: set python {{ python_version }} as global
+      shell: /bin/bash -cl "pyenv global {{ python_version }} && pyenv rehash"
